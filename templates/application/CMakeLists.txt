@@ -5,11 +5,6 @@ project(wiiu_application LANGUAGES C CXX ASM)
 add_executable(${PROJECT_NAME} "")
 wut_create_rpx(${PROJECT_NAME})
 
-# Set a default build type if none was specified
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build type" FORCE)
-endif()
-
 # Declare an asset target for bundled files (optional)
 #dkp_add_asset_target(${PROJECT_NAME}_content content)
 

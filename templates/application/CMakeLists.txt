@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 
 # Declare project containing a single eponymous executable
 project(wiiu_application LANGUAGES C CXX ASM)
-add_executable(${PROJECT_NAME} "")
+add_executable(${PROJECT_NAME})
 wut_create_rpx(${PROJECT_NAME})
 
 # Declare an asset target for bundled files (optional)

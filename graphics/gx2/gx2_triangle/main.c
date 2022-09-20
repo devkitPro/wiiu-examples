@@ -5,11 +5,10 @@
 #include <gx2/registers.h>
 #include <gx2r/draw.h>
 #include <gx2r/buffer.h>
+#include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <whb/file.h>
 #include <whb/proc.h>
-#include <whb/sdcard.h>
 #include <whb/gfx.h>
 #include <whb/log.h>
 #include <whb/log_udp.h>
@@ -17,6 +16,7 @@
 #include <coreinit/systeminfo.h>
 #include <coreinit/thread.h>
 #include <coreinit/time.h>
+#include <coreinit/debug.h>
 
 static const float sPositionData[] =
 {
@@ -34,48 +34,49 @@ static const float sColourData[] =
 
 int main(int argc, char **argv)
 {
-   GX2RBuffer positionBuffer = { 0 };
-   GX2RBuffer colourBuffer = { 0 };
-   WHBGfxShaderGroup group = { 0 };
-   void *buffer = NULL;
-   char *gshFileData = NULL;
-   char *sdRootPath = NULL;
-   char path[256];
-   int result = 0;
-
    WHBLogUdpInit();
    WHBProcInit();
    WHBGfxInit();
 
-   if (!WHBMountSdCard()) {
-      result = -1;
-      goto exit;
+   // Read the shader from the bundled content
+   FILE *gshFile = fopen("/vol/content/pos_col_shader.gsh", "r");
+   if (!gshFile) {
+      OSFatal("Failed to open shader");
+      return -1;
    }
 
-   sdRootPath = WHBGetSdCardMountPath();
-   sprintf(path, "%s/wut/content/pos_col_shader.gsh", sdRootPath);
+   // Get the file size
+   fseek(gshFile, 0, SEEK_END);
+   uint32_t gshFileSize = ftell(gshFile);
+   rewind(gshFile);
 
-   gshFileData = WHBReadWholeFile(path, NULL);
+   void *gshFileData = malloc(gshFileSize);
    if (!gshFileData) {
-      result = -1;
-      WHBLogPrintf("WHBReadWholeFile(%s) returned NULL", path);
-      goto exit;
+      OSFatal("Out of memory");
+      return -1;
    }
 
+   if (fread(gshFileData, 1, gshFileSize, gshFile) != gshFileSize) {
+      OSFatal("Failed to read shader data");
+      return -1;
+   }
+
+   fclose(gshFile);
+
+   WHBGfxShaderGroup group = { 0 };
    if (!WHBGfxLoadGFDShaderGroup(&group, 0, gshFileData)) {
-      result = -1;
-      WHBLogPrintf("WHBGfxLoadGFDShaderGroup returned FALSE");
-      goto exit;
+      OSFatal("WHBGfxLoadGFDShaderGroup returned FALSE");
+      return -1;
    }
 
    WHBGfxInitShaderAttribute(&group, "aPosition", 0, 0, GX2_ATTRIB_FORMAT_FLOAT_32_32_32_32);
    WHBGfxInitShaderAttribute(&group, "aColour", 1, 0, GX2_ATTRIB_FORMAT_FLOAT_32_32_32_32);
    WHBGfxInitFetchShader(&group);
 
-   WHBFreeWholeFile(gshFileData);
-   gshFileData = NULL;
+   free(gshFileData);
 
    // Set vertex position
+   GX2RBuffer positionBuffer = { 0 };
    positionBuffer.flags = GX2R_RESOURCE_BIND_VERTEX_BUFFER |
                           GX2R_RESOURCE_USAGE_CPU_READ |
                           GX2R_RESOURCE_USAGE_CPU_WRITE |
@@ -83,11 +84,12 @@ int main(int argc, char **argv)
    positionBuffer.elemSize = 4 * 4;
    positionBuffer.elemCount = 3;
    GX2RCreateBuffer(&positionBuffer);
-   buffer = GX2RLockBufferEx(&positionBuffer, 0);
+   void *buffer = GX2RLockBufferEx(&positionBuffer, 0);
    memcpy(buffer, sPositionData, positionBuffer.elemSize * positionBuffer.elemCount);
    GX2RUnlockBufferEx(&positionBuffer, 0);
 
    // Set vertex colour
+   GX2RBuffer colourBuffer = { 0 };
    colourBuffer.flags = GX2R_RESOURCE_BIND_VERTEX_BUFFER |
                         GX2R_RESOURCE_USAGE_CPU_READ |
                         GX2R_RESOURCE_USAGE_CPU_WRITE |
@@ -145,13 +147,12 @@ int main(int argc, char **argv)
       WHBGfxFinishRender();
    }
 
-exit:
    WHBLogPrintf("Exiting...");
    GX2RDestroyBufferEx(&positionBuffer, 0);
    GX2RDestroyBufferEx(&colourBuffer, 0);
-   WHBUnmountSdCard();
+
    WHBGfxShutdown();
    WHBProcShutdown();
    WHBLogUdpDeinit();
-   return result;
+   return 0;
 }

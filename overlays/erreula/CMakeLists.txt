@@ -1,10 +1,28 @@
-cmake_minimum_required(VERSION 3.2)
-project(erreula CXX)
+cmake_minimum_required(VERSION 3.13)
 
-add_executable(erreula
-   main.cpp)
+# Declare project containing a single eponymous executable
+project(erreula LANGUAGES C CXX ASM)
+add_executable(${PROJECT_NAME})
+wut_create_rpx(${PROJECT_NAME})
 
-wut_create_rpx(erreula)
+# Generate symbol list and map information (useful for debugging)
+dkp_target_generate_symbol_list(${PROJECT_NAME})
 
-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/erreula.rpx"
-        DESTINATION "${CMAKE_INSTALL_PREFIX}")
+# Generate a Wii U homebrew bundle
+wut_create_wuhb(${PROJECT_NAME}
+	NAME       "${PROJECT_NAME}"
+)
+
+# Options for code generation
+target_compile_options(${PROJECT_NAME} PRIVATE
+	# Common C/C++ options
+	-Wall
+
+	# C++ specific options
+	$<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>
+)
+
+# Source code files
+target_sources(${PROJECT_NAME} PRIVATE
+   main.cpp
+)

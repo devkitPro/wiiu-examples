@@ -1,5 +1,6 @@
+#include <cstdlib>
 #include <coreinit/filesystem.h>
-#include <coreinit/memdefaultheap.h>
+#include <coreinit/debug.h>
 #include <nn/erreula.h>
 #include <vpad/input.h>
 
@@ -17,18 +18,17 @@ int main(int argc, char **argv)
    VPADInit();
 
    // Create FSClient for erreula
-   FSClient *fsClient = (FSClient *)MEMAllocFromDefaultHeap(sizeof(FSClient));
+   FSClient *fsClient = (FSClient *)malloc(sizeof(FSClient));
    FSAddClient(fsClient, FS_ERROR_FLAG_NONE);
 
    // Create erreula
    nn::erreula::CreateArg createArg;
    createArg.region = nn::erreula::RegionType::Europe;
    createArg.language = nn::erreula::LangType::English;
-   createArg.workMemory = MEMAllocFromDefaultHeap(nn::erreula::GetWorkMemorySize());
+   createArg.workMemory = malloc(nn::erreula::GetWorkMemorySize());
    createArg.fsClient = fsClient;
    if (!nn::erreula::Create(createArg)) {
-      WHBLogPrintf("nn::erreula::Create failed");
-      WHBProcShutdown();
+      OSFatal("nn::erreula::Create failed");
       return -1;
    }
 
@@ -87,10 +87,10 @@ int main(int argc, char **argv)
    // Cleanup
    WHBLogPrintf("Exiting...");
    nn::erreula::Destroy();
-   MEMFreeToDefaultHeap(createArg.workMemory);
+   free(createArg.workMemory);
 
    FSDelClient(fsClient, FS_ERROR_FLAG_NONE);
-   MEMFreeToDefaultHeap(fsClient);
+   free(fsClient);
 
    FSShutdown();
    VPADShutdown();

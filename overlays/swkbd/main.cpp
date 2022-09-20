@@ -1,5 +1,6 @@
+#include <cstdlib>
 #include <coreinit/filesystem.h>
-#include <coreinit/memdefaultheap.h>
+#include <coreinit/debug.h>
 #include <nn/swkbd.h>
 #include <vpad/input.h>
 #include <sndcore2/core.h>
@@ -19,17 +20,16 @@ int main(int argc, char **argv)
    AXInit();
 
    // Create FSClient for swkbd
-   FSClient *fsClient = (FSClient *)MEMAllocFromDefaultHeap(sizeof(FSClient));
+   FSClient *fsClient = (FSClient *)malloc(sizeof(FSClient));
    FSAddClient(fsClient, FS_ERROR_FLAG_NONE);
 
    // Create swkbd
    nn::swkbd::CreateArg createArg;
    createArg.regionType = nn::swkbd::RegionType::Europe;
-   createArg.workMemory = MEMAllocFromDefaultHeap(nn::swkbd::GetWorkMemorySize(0));
+   createArg.workMemory = malloc(nn::swkbd::GetWorkMemorySize(0));
    createArg.fsClient = fsClient;
    if (!nn::swkbd::Create(createArg)) {
-      WHBLogPrintf("nn::swkbd::Create failed");
-      WHBProcShutdown();
+      OSFatal("nn::swkbd::Create failed");
       return -1;
    }
 
@@ -41,8 +41,7 @@ int main(int argc, char **argv)
    appearArg.keyboardArg.configArg.languageType = nn::swkbd::LanguageType::English;
    appearArg.inputFormArg.hintText = u"I'm a hint.";
    if (!nn::swkbd::AppearInputForm(appearArg)) {
-      WHBLogPrintf("nn::swkbd::AppearInputForm failed");
-      WHBProcShutdown();
+      OSFatal("nn::swkbd::AppearInputForm failed");
       return -1;
    }
 
@@ -118,10 +117,10 @@ int main(int argc, char **argv)
    // Cleanup
    WHBLogPrintf("Exiting...");
    nn::swkbd::Destroy();
-   MEMFreeToDefaultHeap(createArg.workMemory);
+   free(createArg.workMemory);
 
    FSDelClient(fsClient, FS_ERROR_FLAG_NONE);
-   MEMFreeToDefaultHeap(fsClient);
+   free(fsClient);
 
    FSShutdown();
    VPADShutdown();

@@ -24,5 +24,5 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 # Source code files
 target_sources(${PROJECT_NAME} PRIVATE
-   main.cpp
+   source/main.cpp
 )
